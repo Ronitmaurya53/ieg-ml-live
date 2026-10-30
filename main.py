@@ -321,4 +321,4 @@ def calculate_risk(req: RiskRequest):
 
 if __name__ == "__main__":
     print("🚀 Starting Hybrid AI CCTV Server on Port 8000...")
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port='https://ieg-ml-live.onrender.com')

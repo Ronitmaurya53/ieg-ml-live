@@ -6,7 +6,7 @@ import os
 from deepface import DeepFace
 
 # Configuration
-NODE_API_URL = "http://localhost:5000/api/v1/alerts" # Node.js ka Alert URL
+NODE_API_URL = "https://ieg-backend.onrender.com/api/v1/alerts" # Node.js ka Alert URL
 CAMERA_SOURCE = 0 # 0 for Webcam, ya "rtsp://..." IP Camera ke liye
 EMPLOYEE_FOLDER = "employees"
 
