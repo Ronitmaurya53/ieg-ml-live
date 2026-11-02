@@ -203,8 +203,108 @@ def get_live_detections():
     return live_detections
 
 
+# # ==========================================
+# # 2. FORENSIC SCANNER (DEEPFACE DEDUPLICATION)
+# # ==========================================
+# @app.post("/api/investigate")
+# async def investigate_video(file: UploadFile = File(...)):
+#     print(f"📹 Received video for forensic scan: {file.filename}")
+    
+#     temp_video_path = f"temp_{file.filename}"
+#     with open(temp_video_path, "wb") as buffer:
+#         shutil.copyfileobj(file.file, buffer)
+    
+#     cap = cv2.VideoCapture(temp_video_path)
+#     extracted_faces = []
+#     saved_unknown_crops = [] 
+#     seen_names = set()     
+#     face_count = 0
+#     unknown_counter = 1
+    
+#     while cap.isOpened() and face_count < 15:
+#         ret, frame = cap.read()
+#         if not ret: break
+            
+#         frame_id = int(cap.get(cv2.CAP_PROP_POS_FRAMES))
+#         if frame_id % 10 != 0: 
+#             continue 
+            
+#         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+#         faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=4, minSize=(40, 40))
+        
+#         for (x, y, w, h) in faces:
+#             y1, y2 = max(0, y - 10), min(frame.shape[0], y + h + 10)
+#             x1, x2 = max(0, x - 10), min(frame.shape[1], x + w + 10)
+            
+#             face_roi = frame[y1:y2, x1:x2]
+#             if face_roi.size == 0: continue
+            
+#             person_name = f"Unknown Suspect {unknown_counter}"
+            
+#             try:
+#                 # dfs = DeepFace.find(img_path=face_roi, db_path=EMPLOYEE_FOLDER, enforce_detection=False, silent=True)
+#                 dfs = DeepFace.find(
+#                 img_path=face_roi, 
+#                 db_path=EMPLOYEE_FOLDER, 
+#                 model_name="Facenet", 
+#                 enforce_detection=False, 
+#                 silent=True
+#                 )
+#                 if len(dfs) > 0 and not dfs[0].empty:
+#                     person_name = os.path.splitext(os.path.basename(dfs[0].iloc[0]['identity']))[0].capitalize()
+#             except:
+#                 pass
+            
+#             is_duplicate = False
+#             if "Unknown" not in person_name:
+#                 if person_name in seen_names:
+#                     is_duplicate = True
+#                 else:
+#                     seen_names.add(person_name)
+#             else:
+#                 for saved_face in saved_unknown_crops:
+#                     try:
+#                         # result = DeepFace.verify(face_roi, saved_face, enforce_detection=False, silent=True)
+#                         result = DeepFace.verify(
+#                         img1_path=face_roi, 
+#                         img2_path=saved_face, 
+#                         model_name="Facenet", 
+#                         enforce_detection=False, 
+#                         silent=True
+#                         )
+#                         if result.get("verified", False):
+#                             is_duplicate = True 
+#                             break
+#                     except:
+#                         pass
+                
+#                 if not is_duplicate:
+#                     saved_unknown_crops.append(face_roi)
+#                     unknown_counter += 1
+
+#             if is_duplicate:
+#                 continue
+                
+#             resized_face = cv2.resize(face_roi, (150, 150))
+#             b64_img = encode_image_base64(resized_face)
+            
+#             extracted_faces.append({
+#                 "name": person_name,
+#                 "photo": b64_img
+#             })
+            
+#             face_count += 1
+#             if face_count >= 15:
+#                 break
+
+#     cap.release()
+#     if os.path.exists(temp_video_path):
+#         os.remove(temp_video_path)
+    
+#     return {"success": True, "data": extracted_faces}
+
 # ==========================================
-# 2. FORENSIC SCANNER (DEEPFACE DEDUPLICATION)
+# 2. FORENSIC SCANNER (FAST PROCESSING)
 # ==========================================
 @app.post("/api/investigate")
 async def investigate_video(file: UploadFile = File(...)):
@@ -217,7 +317,7 @@ async def investigate_video(file: UploadFile = File(...)):
     cap = cv2.VideoCapture(temp_video_path)
     extracted_faces = []
     saved_unknown_crops = [] 
-    seen_names = set()     
+    seen_names = set()    
     face_count = 0
     unknown_counter = 1
     
@@ -226,7 +326,8 @@ async def investigate_video(file: UploadFile = File(...)):
         if not ret: break
             
         frame_id = int(cap.get(cv2.CAP_PROP_POS_FRAMES))
-        if frame_id % 10 != 0: 
+        # 🚀 NAYA: 10 ki jagah 30 kiya (Har 1 second scan karega)
+        if frame_id % 30 != 0: 
             continue 
             
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -242,13 +343,12 @@ async def investigate_video(file: UploadFile = File(...)):
             person_name = f"Unknown Suspect {unknown_counter}"
             
             try:
-                # dfs = DeepFace.find(img_path=face_roi, db_path=EMPLOYEE_FOLDER, enforce_detection=False, silent=True)
                 dfs = DeepFace.find(
-                img_path=face_roi, 
-                db_path=EMPLOYEE_FOLDER, 
-                model_name="Facenet", 
-                enforce_detection=False, 
-                silent=True
+                    img_path=face_roi, 
+                    db_path=EMPLOYEE_FOLDER, 
+                    model_name="Facenet", 
+                    enforce_detection=False, 
+                    silent=True
                 )
                 if len(dfs) > 0 and not dfs[0].empty:
                     person_name = os.path.splitext(os.path.basename(dfs[0].iloc[0]['identity']))[0].capitalize()
@@ -262,17 +362,14 @@ async def investigate_video(file: UploadFile = File(...)):
                 else:
                     seen_names.add(person_name)
             else:
+                # 🚀 NAYA: DeepFace verify hata kar Fast OpenCV Pixel Comparison lagaya
                 for saved_face in saved_unknown_crops:
                     try:
-                        # result = DeepFace.verify(face_roi, saved_face, enforce_detection=False, silent=True)
-                        result = DeepFace.verify(
-                        img1_path=face_roi, 
-                        img2_path=saved_face, 
-                        model_name="Facenet", 
-                        enforce_detection=False, 
-                        silent=True
-                        )
-                        if result.get("verified", False):
+                        resized_roi = cv2.resize(face_roi, (100, 100))
+                        resized_saved = cv2.resize(saved_face, (100, 100))
+                        diff = cv2.absdiff(resized_roi, resized_saved)
+                        
+                        if np.mean(diff) < 45: # Agar photo milti-julti hai toh skip karega
                             is_duplicate = True 
                             break
                     except:
