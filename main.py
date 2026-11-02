@@ -242,7 +242,14 @@ async def investigate_video(file: UploadFile = File(...)):
             person_name = f"Unknown Suspect {unknown_counter}"
             
             try:
-                dfs = DeepFace.find(img_path=face_roi, db_path=EMPLOYEE_FOLDER, enforce_detection=False, silent=True)
+                # dfs = DeepFace.find(img_path=face_roi, db_path=EMPLOYEE_FOLDER, enforce_detection=False, silent=True)
+                dfs = DeepFace.find(
+                img_path=face_roi, 
+                db_path=EMPLOYEE_FOLDER, 
+                model_name="Facenet", 
+                enforce_detection=False, 
+                silent=True
+                )
                 if len(dfs) > 0 and not dfs[0].empty:
                     person_name = os.path.splitext(os.path.basename(dfs[0].iloc[0]['identity']))[0].capitalize()
             except:
@@ -257,7 +264,14 @@ async def investigate_video(file: UploadFile = File(...)):
             else:
                 for saved_face in saved_unknown_crops:
                     try:
-                        result = DeepFace.verify(face_roi, saved_face, enforce_detection=False, silent=True)
+                        # result = DeepFace.verify(face_roi, saved_face, enforce_detection=False, silent=True)
+                        result = DeepFace.verify(
+                        img1_path=face_roi, 
+                        img2_path=saved_face, 
+                        model_name="Facenet", 
+                        enforce_detection=False, 
+                        silent=True
+                        )
                         if result.get("verified", False):
                             is_duplicate = True 
                             break
@@ -319,6 +333,11 @@ def calculate_risk(req: RiskRequest):
         }
     }
 
+# if __name__ == "__main__":
+#     print("🚀 Starting Hybrid AI CCTV Server on Port 8000...")
+#     uvicorn.run(app, host="0.0.0.0", port='https://ieg-ml-live.onrender.com')
+
 if __name__ == "__main__":
-    print("🚀 Starting Hybrid AI CCTV Server on Port 8000...")
-    uvicorn.run(app, host="0.0.0.0", port='https://ieg-ml-live.onrender.com')
+    port = int(os.environ.get("PORT", 8000))
+    print(f"🚀 Starting Hybrid AI CCTV Server on Port {port}...")
+    uvicorn.run(app, host="0.0.0.0", port=port)
